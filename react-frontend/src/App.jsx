@@ -1,58 +1,41 @@
 import { useState } from 'react';
-import './App.css'; 
+import './App.css';
 
 function App() {
-  // 1. Create state variables
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [xValue, setXValue] = useState(null);
+  const [fileName, setFileName] = useState('');
 
-  // --- MODIFIED: This will hold the 'x' value after we read it from the file ---
-  const [xValue, setXValue] = useState(null); // Start as null
-  const [fileName, setFileName] = useState(''); // Just to show the user's file name
-
-  // --- NEW: This function runs when the user selects a file ---
   const handleFileChange = (event) => {
     const file = event.target.files[0];
-    if (!file) return; // User clicked "cancel"
+    if (!file) return;
 
     setFileName(file.name);
     setLoading(true);
     setError(null);
     setMessage('');
-    
+
     const reader = new FileReader();
 
-    // This function runs when the file has been successfully read
     reader.onload = (e) => {
       try {
-        const content = e.target.result; // This is the text content of the file
-        
-        // --- THIS IS THE UPDATED LOGIC ---
-        
-        // 1. Split the file into lines
+        const content = e.target.result;
         const lines = content.split('\n');
 
-        // 2. Check if there are at least 2 lines (header + data)
         if (lines.length < 2) {
           throw new Error('File must have at least 2 lines (header and data).');
         }
 
-        // 3. Get the SECOND line (index 1), which has the data
-        const dataLine = lines[1]; 
-        
-        // 4. Get the first value from that data line
+        const dataLine = lines[1];
         const firstValue = dataLine.split(',')[0].trim();
         const parsedX = parseInt(firstValue, 10);
 
         if (isNaN(parsedX)) {
-          // Handle cases where the file content isn't a number
           throw new Error(`Could not read a number from the second line. Found: "${firstValue}"`);
         }
-        
-        // --- END OF UPDATED LOGIC ---
 
-        // 4. Save the parsed number to our state
         setXValue(parsedX);
         setLoading(false);
 
@@ -63,14 +46,11 @@ function App() {
         setFileName('');
       }
     };
-    
-    // Start reading the file
+
     reader.readAsText(file);
   };
 
-  // 2. This function will be called when the button is clicked
   const fetchData = async () => {
-    // Make sure we have a value from the file first
     if (xValue === null) {
       setError('Please select a valid CSV file first.');
       return;
@@ -81,7 +61,6 @@ function App() {
     setMessage('');
 
     try {
-      // This part is the same as before. It uses the 'xValue' from the file.
       const response = await fetch(`http://127.0.0.1:8002/${xValue}`);
 
       if (!response.ok) {
@@ -98,45 +77,108 @@ function App() {
     }
   };
 
-  // 5. This is the HTML (JSX) that gets rendered
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1>FastAPI + React</h1>
-        
-        {/* --- MODIFIED: Replaced the number input with a file input --- */}
-        <div>
-          <label htmlFor="csv-input" style={{ marginRight: '10px' }}>
-            1. Select CSV File:
-          </label>
-          <input
-            id="csv-input"
-            type="file"
-            accept=".csv, .txt" // Only allow CSV or TXT files
-            onChange={handleFileChange}
-          />
+    <div className="app-container">
+      <div className="main-card">
+        <div className="header-section">
+          <div className="icon-wrapper">
+            <svg className="api-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <h1 className="title">Data Processing Hub</h1>
+          <p className="subtitle">Upload your CSV file and process it through our API</p>
         </div>
 
-        {/* Show what we loaded */}
-        {xValue !== null && (
-          <p>Loaded value <strong>{xValue}</strong> from <strong>{fileName}</strong></p>
-        )}
+        <div className="content-section">
+          <div className="upload-section">
+            <label className="upload-label">
+              <input
+                type="file"
+                accept=".csv, .txt"
+                onChange={handleFileChange}
+                className="file-input"
+                disabled={loading}
+              />
+              <div className="upload-button">
+                <svg className="upload-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span className="upload-text">
+                  {fileName ? fileName : 'Choose CSV or TXT file'}
+                </span>
+              </div>
+            </label>
+          </div>
 
-        <br /> 
+          {xValue !== null && (
+            <div className="file-info">
+              <svg className="check-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <div className="file-details">
+                <span className="file-label">Loaded value:</span>
+                <span className="file-value">{xValue}</span>
+                <span className="file-name">from {fileName}</span>
+              </div>
+            </div>
+          )}
 
-        {/* This button is now step 2 */}
-        <button 
-          onClick={fetchData} 
-          disabled={loading || xValue === null} // Disable button if loading or no file is loaded
-        >
-          {loading ? 'Processing...' : '2. Get Message from API'}
-        </button>
+          <button
+            onClick={fetchData}
+            disabled={loading || xValue === null}
+            className={`action-button ${loading ? 'loading' : ''} ${xValue === null ? 'disabled' : ''}`}
+          >
+            {loading ? (
+              <>
+                <span className="spinner"></span>
+                Processing...
+              </>
+            ) : (
+              <>
+                <svg className="button-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Process with API
+              </>
+            )}
+          </button>
 
-        {/* Display the message, error, or nothing */}
-        {message && <h2>API Response: {message}</h2>}
-        {error && <h2 style={{ color: 'red' }}>Error: {error}</h2>}
+          {message && (
+            <div className="result-card success">
+              <div className="result-header">
+                <svg className="result-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                  <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+                <span className="result-label">API Response</span>
+              </div>
+              <p className="result-message">{message}</p>
+            </div>
+          )}
 
-      </header>
+          {error && (
+            <div className="result-card error">
+              <div className="result-header">
+                <svg className="result-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                  <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+                <span className="result-label">Error</span>
+              </div>
+              <p className="result-message">{error}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="footer-section">
+          <div className="tech-stack">
+            <span className="tech-badge">FastAPI</span>
+            <span className="tech-badge">React</span>
+            <span className="tech-badge">Vite</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
